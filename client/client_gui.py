@@ -4,6 +4,7 @@ Phish-Guard Client GUI
 - 로컬 백엔드와 메인 서버에 동시에 URL 분석 요청
 - /health_pubkey + /healthz 기반 링크 무결성 체크
 - /api/analyze/{id} 응답의 signed_payload/sig 서명 검증
+- 최초 실행 시 config.json 자동 생성 (설정/업데이트/환경 분리용)
 
 의존 패키지:
     pip install PyQt6 requests cryptography
@@ -22,8 +23,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
-import urllib3
-from urllib3.exceptions import InsecureRequestWarning
 
 from PyQt6.QtCore import QThread, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont, QColor, QPalette
@@ -45,6 +44,9 @@ from PyQt6.QtWidgets import (
     QProgressBar,
 )
 
+# ─────────────────────────────────────────────────────────────
+# cryptography (서명 검증용)
+# ─────────────────────────────────────────────────────────────
 try:
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.hazmat.primitives import hashes
@@ -55,35 +57,25 @@ except Exception:
     _HAS_CRYPTO = False
 
 # ─────────────────────────────────────────────────────────────
-# 기본 설정
+# 기본 설정/전역 상태 (bootstrap에서 override)
 # ─────────────────────────────────────────────────────────────
 
+APP_NAME = "PhishGuardClient"
+
+# 로컬 백엔드: Docker 컨테이너 (HTTP)
 LOCAL_API_BASE = os.getenv("PG_LOCAL_API_BASE", "http://127.0.0.1:9000")
-DEFAULT_MAIN_API_BASE = os.getenv("PG_MAIN_API_BASE", "https://127.0.0.1:14444")
 
-# TLS 검증 설정 (False / True / CA 번들 경로)
-#   - PG_TLS_VERIFY=0 / false / off → _TLS_VERIFY = False (개발용, 경고 숨김)
-#   - PG_TLS_VERIFY=1 / true / on  → _TLS_VERIFY = True  (시스템 기본 신뢰)
-#   - PG_TLS_VERIFY=<경로>         → _TLS_VERIFY = "<경로>" (CA 번들)
-_tls_env = os.getenv("PG_TLS_VERIFY", "0")
-if _tls_env.lower() in ("0", "false", "no", "off"):
-    _TLS_VERIFY: Any = False
-elif _tls_env.lower() in ("1", "true", "yes", "on"):
-    _TLS_VERIFY = True
-else:
-    _TLS_VERIFY = _tls_env  # CA 번들 경로 문자열
+# 메인 서버 기본값 (bootstrap에서 config/env로 덮어씀)
+DEFAULT_MAIN_API_BASE = "https://127.0.0.1:14444"
 
-# 🔇 개발용: TLS 검증을 일부러 끈 경우(verify=False) InsecureRequestWarning 숨기기
-if _TLS_VERIFY is False:
-    urllib3.disable_warnings(InsecureRequestWarning)
+# API 키 기본값 (bootstrap에서 config/env로 덮어씀)
+DEFAULT_API_KEY = "dev-key-123"
 
-# 분석 결과 polling 관련 기본 설정
-#   - 한 작업당 최대 대기 시간 / 폴링 간격 (환경변수로 조절 가능)
-MAX_POLL_SECONDS = int(os.getenv("PG_MAX_POLL_SECONDS", "180"))   # 3분
-POLL_INTERVAL_SEC = float(os.getenv("PG_POLL_INTERVAL", "1.0"))   # 1초
+# TLS 검증 (False / True / CA bundle path) - bootstrap에서 최종 결정
+_TLS_VERIFY: Any = False
 
-# health_pubkey 캐시
-_PUBKEY_CACHE: Dict[str, Any] = {}
+# config.json 로딩 결과
+CONFIG: Dict[str, Any] = {}
 
 try:
     _HOSTNAME = socket.gethostname()
@@ -92,6 +84,131 @@ except Exception:
 
 CLIENT_ID = os.getenv("PG_CLIENT_ID") or f"desktop-{_HOSTNAME}"
 CLIENT_VERSION = "pg-client-0.5.0"
+
+GITHUB_REPO = "BJtaito/PhishGuardClient"  # 나중에 업데이트 체크 등에 쓸 수 있음
+
+# health_pubkey 캐시
+_PUBKEY_CACHE: Dict[str, Any] = {}
+
+# ─────────────────────────────────────────────────────────────
+# bootstrap: config.json 생성 + 환경 적용
+# ─────────────────────────────────────────────────────────────
+
+def get_app_dir() -> Path:
+    """플랫폼별 기본 설정 디렉터리 결정."""
+    if os.name == "nt":
+        base = os.getenv("APPDATA", str(Path.home()))
+        return Path(base) / APP_NAME
+    else:
+        base = os.getenv("XDG_CONFIG_HOME", str(Path.home() / ".config"))
+        return Path(base) / APP_NAME
+
+
+def ensure_config(app_dir: Path) -> Path:
+    """
+    APPDIR/config.json 이 없으면 기본 템플릿으로 생성.
+    (민감한 값 없이 구조만 잡아둔 형태)
+    """
+    cfg_path = app_dir / "config.json"
+    if cfg_path.exists():
+        return cfg_path
+
+    default_cfg = {
+        # 메인 서버 주소 (없으면 코드 기본값 사용)
+        "main_api_base": "",
+        # 사용자 API 키 (없으면 GUI에서 입력)
+        "api_key": "",
+        # TLS 검증 설정: false / true / "path/to/ca.pem"
+        "tls_verify": False,
+        # Challenge 탭 노출 여부 (기본 OFF)
+        "enable_challenge_tab": False,
+        # 업데이트 채널 (나중에 활용 가능)
+        "update_channel": "stable",
+    }
+
+    cfg_path.write_text(
+        json.dumps(default_cfg, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return cfg_path
+
+
+def load_config(app_dir: Path) -> Dict[str, Any]:
+    cfg_path = ensure_config(app_dir)
+    try:
+        text = cfg_path.read_text(encoding="utf-8")
+        data = json.loads(text)
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        pass
+    return {}
+
+
+def bootstrap():
+    """
+    - APPDATA/XDG_CONFIG_HOME 아래에 앱 디렉토리 및 config.json 생성
+    - config/env를 읽어 DEFAULT_MAIN_API_BASE, DEFAULT_API_KEY, _TLS_VERIFY 반영
+    - TLS verify가 False이면 InsecureRequestWarning 경고 비활성화
+    """
+    global CONFIG, DEFAULT_MAIN_API_BASE, DEFAULT_API_KEY, _TLS_VERIFY
+
+    app_dir = get_app_dir()
+    app_dir.mkdir(parents=True, exist_ok=True)
+
+    CONFIG = load_config(app_dir)
+
+    # ─ Main API BASE: env > config > 기본값
+    env_main = os.getenv("PG_MAIN_API_BASE")
+    if env_main:
+        DEFAULT_MAIN_API_BASE = env_main
+    else:
+        cfg_main = CONFIG.get("main_api_base")
+        if isinstance(cfg_main, str) and cfg_main.strip():
+            DEFAULT_MAIN_API_BASE = cfg_main.strip()
+
+    # ─ API KEY: env > config > 기본값
+    env_key = os.getenv("PG_API_KEY") or os.getenv("API_KEY")
+    if env_key:
+        DEFAULT_API_KEY = env_key
+    else:
+        cfg_key = CONFIG.get("api_key")
+        if isinstance(cfg_key, str) and cfg_key.strip():
+            DEFAULT_API_KEY = cfg_key.strip()
+
+    # ─ TLS VERIFY: env > config > 기본 False
+    env_tls = os.getenv("PG_TLS_VERIFY")
+    if env_tls is not None:
+        low = env_tls.lower()
+        if low in ("0", "false", "no", "off"):
+            _TLS_VERIFY = False
+        elif low in ("1", "true", "yes", "on"):
+            _TLS_VERIFY = True
+        else:
+            _TLS_VERIFY = env_tls  # CA 경로
+    else:
+        tls_cfg = CONFIG.get("tls_verify")
+        if isinstance(tls_cfg, bool):
+            _TLS_VERIFY = tls_cfg
+        elif isinstance(tls_cfg, str) and tls_cfg.strip():
+            low = tls_cfg.lower()
+            if low in ("0", "false", "no", "off"):
+                _TLS_VERIFY = False
+            elif low in ("1", "true", "yes", "on"):
+                _TLS_VERIFY = True
+            else:
+                _TLS_VERIFY = tls_cfg.strip()
+
+    # ─ TLS 검증 꺼져 있으면 urllib3 경고 숨김
+    if _TLS_VERIFY is False:
+        try:
+            import urllib3
+            from urllib3.exceptions import InsecureRequestWarning
+
+            urllib3.disable_warnings(InsecureRequestWarning)
+        except Exception:
+            # 경고 끄는 데 실패해도 동작에는 영향 없음
+            pass
 
 
 # ─────────────────────────────────────────────────────────────
@@ -295,7 +412,7 @@ def verify_task_result_signature(
 
 
 # ─────────────────────────────────────────────────────────────
-# /api/analyze 1회 실행 (+ flooding 방지)
+# /api/analyze 1회 실행
 # ─────────────────────────────────────────────────────────────
 
 def analyze_once(
@@ -333,22 +450,8 @@ def analyze_once(
 
     last_status = None
     status: Dict[str, Any] = {}
-    start_ts = time.time()
-    polls = 0
-
     while True:
-        time.sleep(POLL_INTERVAL_SEC)
-        polls += 1
-
-        # 네트워크 / 서버 이상으로 인한 과도한 polling 방지
-        elapsed = time.time() - start_ts
-        if elapsed > MAX_POLL_SECONDS:
-            log(
-                f"[ERROR] polling timeout: {elapsed:.1f}s "
-                f"(limit={MAX_POLL_SECONDS}s). 네트워크 이상 또는 서버 지연으로 판단하고 중단합니다."
-            )
-            raise RuntimeError("분석 결과 대기 시간 초과 (polling limit)")
-
+        time.sleep(1.0)
         status = http_request(api_base, api_key, "GET", f"/api/analyze/{job_id}")
         s = status.get("status")
         if s != last_status:
@@ -937,7 +1040,7 @@ class AnalyzeTab(QWidget):
 
 
 # ─────────────────────────────────────────────────────────────
-# 탭: Challenge 인증 (코드는 남겨두지만, 현재 탭은 UI에서 사용하지 않음)
+# 탭: Challenge 인증 (옵션)
 # ─────────────────────────────────────────────────────────────
 
 class ChallengeTab(QWidget):
@@ -1170,8 +1273,9 @@ class MainWindow(QMainWindow):
         self.lbl_local_trust.setStyleSheet("color: #6b7280;")
         cfg_layout.addRow("Local 링크 서명:", self.lbl_local_trust)
 
-        # Main 서버 URL + 상태
-        self.api_base_edit = QLineEdit(DEFAULT_MAIN_API_BASE)
+        # Main 서버 URL + 상태 (CONFIG/main_api_base → DEFAULT_MAIN_API_BASE 순)
+        default_main = CONFIG.get("main_api_base") or DEFAULT_MAIN_API_BASE
+        self.api_base_edit = QLineEdit(default_main)
         h_main = QHBoxLayout()
         h_main.addWidget(self.api_base_edit)
         self.lbl_main_status = QLabel("미확인")
@@ -1184,8 +1288,8 @@ class MainWindow(QMainWindow):
         self.lbl_main_trust.setStyleSheet("color: #6b7280;")
         cfg_layout.addRow("Main 링크 서명:", self.lbl_main_trust)
 
-        # API Key
-        default_key = os.getenv("PG_API_KEY") or os.getenv("API_KEY") or "dev-key-123"
+        # API Key (CONFIG/api_key → DEFAULT_API_KEY 순)
+        default_key = CONFIG.get("api_key") or DEFAULT_API_KEY
         self.api_key_edit = QLineEdit(default_key)
         self.api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
         cfg_layout.addRow("X-API-Key:", self.api_key_edit)
@@ -1228,9 +1332,11 @@ class MainWindow(QMainWindow):
         self.analyze_tab = AnalyzeTab(self.api_base_edit, self.api_key_edit, self.status_bar)
         tabs.addTab(self.analyze_tab, "URL 분석")
 
-        # ChallengeTab는 현재 빌드에서는 사용하지 않음
-        # self.challenge_tab = ChallengeTab(self.api_base_edit, self.api_key_edit, self.status_bar)
-        # tabs.addTab(self.challenge_tab, "Challenge 인증 (테스트)")
+        # Challenge 탭은 config.enable_challenge_tab 이 True일 때만 표시
+        self.challenge_tab: Optional[ChallengeTab] = None
+        if bool(CONFIG.get("enable_challenge_tab", False)):
+            self.challenge_tab = ChallengeTab(self.api_base_edit, self.api_key_edit, self.status_bar)
+            tabs.addTab(self.challenge_tab, "Challenge 인증 (테스트)")
 
         main_layout.addWidget(tabs, 1)
         self.setCentralWidget(central)
@@ -1248,7 +1354,11 @@ class MainWindow(QMainWindow):
 
     def _check_api_alive(self, api_base: str, timeout: int = 2) -> bool:
         try:
-            r = requests.get(api_base.rstrip("/") + "/health", timeout=timeout, verify=_TLS_VERIFY)
+            r = requests.get(
+                api_base.rstrip("/") + "/health",
+                timeout=timeout,
+                verify=_TLS_VERIFY,
+            )
             return r.status_code == 200
         except Exception:
             return False
@@ -1470,7 +1580,11 @@ class MainWindow(QMainWindow):
 
         # Local 테스트
         try:
-            r = requests.get(LOCAL_API_BASE.rstrip("/") + "/health", timeout=3, verify=_TLS_VERIFY)
+            r = requests.get(
+                LOCAL_API_BASE.rstrip("/") + "/health",
+                timeout=3,
+                verify=_TLS_VERIFY,
+            )
             ok_local = r.status_code == 200
         except Exception:
             ok_local = False
@@ -1480,7 +1594,11 @@ class MainWindow(QMainWindow):
         ok_main = False
         if main_base:
             try:
-                r2 = requests.get(main_base.rstrip("/") + "/health", timeout=3, verify=_TLS_VERIFY)
+                r2 = requests.get(
+                    main_base.rstrip("/") + "/health",
+                    timeout=3,
+                    verify=_TLS_VERIFY,
+                )
                 ok_main = r2.status_code == 200
             except Exception:
                 ok_main = False
@@ -1506,6 +1624,9 @@ class MainWindow(QMainWindow):
 # ─────────────────────────────────────────────────────────────
 
 def main():
+    # ⬇️ 최초 실행 시 config.json 생성 + 설정 적용
+    bootstrap()
+
     app = QApplication(sys.argv)
     font = QFont()
     font.setPointSize(10)
