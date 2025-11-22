@@ -1,0 +1,79 @@
+import os, csv, glob, time, datetime as dt
+from analyzer import ml_detector as M
+
+try:
+    import httpx
+except Exception:
+    httpx = None
+
+FETCH_TIMEOUT = float(os.environ.get("TRAIN_FETCH_TIMEOUT", "4.0"))
+UA = os.environ.get("TRAIN_FETCH_UA", "PhishGuard-Train/1.0 (+html)")
+
+def parse_ts(s):
+    if not s: return None
+    for fmt in ("%Y-%m-%d","%Y/%m/%d","%Y-%m-%d %H:%M:%S","%Y/%m/%d %H:%M:%S","%Y-%m","%Y/%m","%Y"):
+        try: return dt.datetime.strptime(s.strip(), fmt).timestamp()
+        except: pass
+    try: return dt.datetime.fromisoformat(s.replace("Z","")).timestamp()
+    except: return None
+
+def fetch_html(u: str) -> str:
+    if not httpx: return ""
+    if not u.lower().startswith(("http://","https://")):
+        return ""
+    try:
+        r = httpx.get(u, timeout=FETCH_TIMEOUT, headers={"User-Agent": UA}, follow_redirects=True)
+        text = r.text or ""
+        ct = (r.headers.get("content-type") or "").lower()
+        if "text/html" in ct or "<html" in (text[:1024].lower()):
+            return text
+    except Exception:
+        pass
+    return ""
+
+def main(root):
+    files = glob.glob(os.path.join(root, "**", "*.csv"), recursive=True)
+    total = 0; bad_files = 0; t0 = time.time()
+    print(f"[train+html] files={len(files)} root={root}", flush=True)
+
+    for idx, fp in enumerate(files, 1):
+        fstart = time.time()
+        print(f"[train+html] ({idx}/{len(files)}) start: {fp}", flush=True)
+        processed = 0
+        try:
+            with open(fp, "r", encoding="utf-8", errors="ignore", newline="") as f:
+                r = csv.DictReader(f)
+                for row in r:
+                    url = (row.get("url") or row.get("URL") or row.get("Url") or "").strip()
+                    if not url:
+                        try:
+                            url = list(row.values())[0].strip()
+                        except Exception:
+                            continue
+                    if not url: 
+                        continue
+                    ts = parse_ts(row.get("date") or row.get("DATE") or row.get("timestamp") or "")
+                    html = fetch_html(url)
+                    M.feedback(url, label=-1, ts=ts, html=html)  # HTML 함께 학습
+                    processed += 1; total += 1
+
+                    if (processed % 100) == 0:
+                        dt_s = time.time() - fstart
+                        rate = processed / dt_s if dt_s > 0 else 0.0
+                        print(f"  ... {processed} rows ({rate:.1f} rows/s) file={os.path.basename(fp)}", flush=True)
+        except Exception as e:
+            bad_files += 1
+            print(f"[train+html] ERROR file={fp}: {e}", flush=True)
+        finally:
+            dt_s = time.time() - fstart
+            print(f"[train+html] done: file={fp} rows={processed} time={dt_s:.2f}s", flush=True)
+
+    print(f"[train+html] total_rows={total} bad_files={bad_files} elapsed={time.time()-t0:.2f}s", flush=True)
+    print("[maint] beat...", flush=True)
+    print(M.maint_beat(), flush=True)
+    print(M.status(), flush=True)
+
+if __name__ == "__main__":
+    import sys
+    root = sys.argv[1] if len(sys.argv)>1 else r"D:\cap\feeds\phishurl-list"
+    main(root)

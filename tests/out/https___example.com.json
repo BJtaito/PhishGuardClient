@@ -1,0 +1,33 @@
+{
+  "evidence": {
+    "start_url": "https://example.com",
+    "final_url": "https://example.com/",
+    "final_ip": [
+      "23.215.0.136",
+      "23.215.0.138",
+      "23.220.75.232",
+      "23.220.75.245"
+    ],
+    "redirect_chain": [
+      {
+        "url": "https://example.com/",
+        "status": 200,
+        "note": ""
+      }
+    ],
+    "html_sha256": "ad308e8be313569b5bc7760ce31bd4b73ace6be207c834e1a22d3b0625e764d3",
+    "tls": {
+      "leaf_fingerprint": "455943cf819425761d1f950263ebf54755d8d684c25535943976f488bc79d23b"
+    },
+    "network_posts": [],
+    "page_findings": {
+      "external_form_actions": 0,
+      "form_samples": []
+    },
+    "timestamp": "2025-10-10T06:19:48Z",
+    "analyzer_version": "an1"
+  },
+  "risk_score": 0,
+  "label": "benign",
+  "reasons": []
+}

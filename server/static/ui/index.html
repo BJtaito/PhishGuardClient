@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Phish-Guard 분석 콘솔</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: #0f172a;
+        color: #e5e7eb;
+        margin: 0;
+        padding: 0;
+      }
+      .wrap {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 16px 40px;
+      }
+      h1 {
+        font-size: 26px;
+        margin-bottom: 6px;
+      }
+      .subtitle {
+        color: #9ca3af;
+        margin-bottom: 24px;
+        font-size: 13px;
+      }
+      .card {
+        background: #020617;
+        border-radius: 12px;
+        padding: 16px 18px;
+        border: 1px solid #1f2937;
+        margin-bottom: 16px;
+      }
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .card-title {
+        font-weight: 600;
+        font-size: 15px;
+      }
+      .pill {
+        border-radius: 999px;
+        padding: 3px 10px;
+        font-size: 11px;
+        border: 1px solid #374151;
+        color: #d1d5db;
+      }
+      .pill.low {
+        border-color: #10b981;
+        color: #a7f3d0;
+      }
+      .pill.mid {
+        border-color: #f59e0b;
+        color: #fde68a;
+      }
+      .pill.high {
+        border-color: #ef4444;
+        color: #fecaca;
+      }
+      .pill.small-pill {
+        padding: 2px 8px;
+        font-size: 10px;
+      }
+      input[type="text"] {
+        width: 100%;
+        box-sizing: border-box;
+        border-radius: 8px;
+        border: 1px solid #374151;
+        padding: 8px 10px;
+        background: #020617;
+        color: #e5e7eb;
+        font-size: 14px;
+      }
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 1px #1d4ed8;
+      }
+      button {
+        border-radius: 8px;
+        border: none;
+        padding: 8px 14px;
+        background: #3b82f6;
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .row > div {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+      .score-main {
+        font-size: 28px;
+        font-weight: 700;
+      }
+      .score-sub {
+        font-size: 12px;
+        color: #9ca3af;
+      }
+      .kv {
+        font-size: 13px;
+        margin-top: 3px;
+      }
+      .kv span.key {
+        color: #9ca3af;
+      }
+      .kv span.val {
+        color: #e5e7eb;
+        margin-left: 4px;
+      }
+      ul.reasons {
+        list-style: none;
+        padding-left: 0;
+        margin: 6px 0 0;
+        font-size: 13px;
+        max-height: 260px;
+        overflow-y: auto;
+      }
+      ul.reasons li {
+        padding: 4px 0;
+        border-bottom: 1px solid #111827;
+      }
+      .feature {
+        color: #9ca3af;
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+      .reason-detail {
+        font-size: 13px;
+      }
+      .score-chip {
+        font-size: 11px;
+        color: #d1d5db;
+      }
+      .foot {
+        margin-top: 16px;
+        font-size: 11px;
+        color: #6b7280;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 11px;
+        background: #020617;
+        padding: 2px 4px;
+        border-radius: 4px;
+      }
+      .small {
+        font-size: 12px;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+      }
+      /* 다운로드 테이블 */
+      .dl-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+        font-size: 12px;
+      }
+      .dl-table th,
+      .dl-table td {
+        padding: 4px 6px;
+        border-bottom: 1px solid #111827;
+        text-align: left;
+        vertical-align: middle;
+      }
+      .dl-table th {
+        color: #9ca3af;
+        font-weight: 500;
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Phish-Guard URL 분석</h1>
+      <div class="subtitle">
+        자체 정적/동적 분석 + ML +
+        <span style="color:#60a5fa;">VirusTotal 평판</span>을 조합한 PoC 콘솔입니다.
+      </div>
+
+      <!-- 입력 카드 -->
+      <div class="card">
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+          <input
+            id="urlInput"
+            type="text"
+            placeholder="분석할 URL을 입력하세요 (예: https://example.com)"
+          />
+          <button id="analyzeBtn">분석</button>
+        </div>
+        <div class="small" style="color:#9ca3af;">
+          기본 API 키는 예시입니다. 실제 서버의 <code>API_KEYS</code> 환경 변수에
+          맞게 JS 상단의 <code>API_KEY</code> 값을 변경하세요.
+        </div>
+      </div>
+
+      <div id="resultArea" style="display:none;">
+        <!-- 요약 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">요약</div>
+            <span id="riskPill" class="pill">-</span>
+          </div>
+          <div class="row">
+            <div>
+              <div class="score-main" id="scoreMain">-</div>
+              <div class="score-sub" id="scoreSub">Score / 100</div>
+            </div>
+            <div>
+              <div class="kv">
+                <span class="key">엔진:</span>
+                <span class="val" id="engineName">-</span>
+              </div>
+              <div class="kv">
+                <span class="key">ML:</span>
+                <span class="val" id="mlInfo">-</span>
+              </div>
+              <div class="kv">
+                <span class="key">HTTP 상태:</span>
+                <span class="val" id="httpStatus">-</span>
+              </div>
+              <div class="kv">
+                <span class="key">다운로드 분석:</span>
+                <span class="val" id="dlStatus">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VirusTotal (URL 평판) -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">VirusTotal</div>
+            <span class="pill" id="vtPill">정보 없음</span>
+          </div>
+          <div id="vtBody" class="small">
+            VirusTotal 정보가 없습니다.
+          </div>
+        </div>
+
+        <!-- 다운로드 / 파일 분석 -->
+        <div class="card" id="downloadsCard" style="display:none;">
+          <div class="card-header">
+            <div class="card-title">다운로드 / 파일 분석</div>
+            <span class="pill" id="dlPill">-</span>
+          </div>
+          <div id="downloadsBody" class="small">
+            다운로드 정보가 없습니다.
+          </div>
+        </div>
+
+        <!-- 룰 & 피처 / 이유 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">룰 & 피처</div>
+            <span class="pill">Rules / ML / VT 조합</span>
+          </div>
+          <ul class="reasons" id="reasonList"></ul>
+        </div>
+      </div>
+
+      <div class="foot">
+        서버 엔드포인트:
+        <code>/analyze</code> → <code>/tasks/&lt;id&gt;</code>
+        (현재 페이지는 PoC용 UI입니다.)
+      </div>
+    </div>
+
+    <script>
+      const API_KEY = "dev-key-123"; // 🔹 실제 API 키에 맞게 수정
+
+      const urlInput = document.getElementById("urlInput");
+      const analyzeBtn = document.getElementById("analyzeBtn");
+      const resultArea = document.getElementById("resultArea");
+      const scoreMain = document.getElementById("scoreMain");
+      const scoreSub = document.getElementById("scoreSub");
+      const riskPill = document.getElementById("riskPill");
+      const engineName = document.getElementById("engineName");
+      const mlInfo = document.getElementById("mlInfo");
+      const httpStatus = document.getElementById("httpStatus");
+      const dlStatus = document.getElementById("dlStatus");
+      const vtPill = document.getElementById("vtPill");
+      const vtBody = document.getElementById("vtBody");
+      const reasonList = document.getElementById("reasonList");
+
+      const downloadsCard = document.getElementById("downloadsCard");
+      const downloadsBody = document.getElementById("downloadsBody");
+      const dlPill = document.getElementById("dlPill");
+
+      function setRiskPill(score) {
+        let lvl = "정상 (Low)";
+        let cls = "low";
+        if (score >= 70) {
+          lvl = "위험 (High)";
+          cls = "high";
+        } else if (score >= 30) {
+          lvl = "주의 (Medium)";
+          cls = "mid";
+        }
+        riskPill.textContent = `${lvl}`;
+        riskPill.className = `pill ${cls}`;
+      }
+
+      // ───────── VirusTotal URL 표기 ─────────
+      function renderVT(vt) {
+        if (!vt || vt.error) {
+          vtPill.textContent = "정보 없음";
+          vtPill.className = "pill";
+          vtBody.textContent = vt && vt.error
+            ? `VirusTotal 오류: ${vt.error}`
+            : "VirusTotal 레포트가 존재하지 않거나 비활성화되어 있습니다.";
+          return;
+        }
+        if (!vt.found) {
+          vtPill.textContent = "미등록 URL";
+          vtPill.className = "pill";
+          vtBody.textContent =
+            "이 URL은 VirusTotal에 아직 등록되지 않았습니다 (분석 요청이 없었거나 캐시가 없음).";
+          return;
+        }
+
+        const mal = vt.malicious || 0;
+        const engines = vt.total_engines || 0;
+        const ratio = vt.ratio != null ? vt.ratio : 0;
+
+        // 🔹 여기서는 “정상/주의/경고” 라벨 대신, 엔진 수 / 비율만 출력
+        vtPill.textContent = `${mal} / ${engines} 엔진 감지`;
+        vtPill.className = "pill";
+
+        vtBody.innerHTML = `
+          <div class="kv">
+            <span class="key">감지 엔진 수:</span>
+            <span class="val">${mal} / ${engines}</span>
+          </div>
+          <div class="kv">
+            <span class="key">비율:</span>
+            <span class="val">${ratio}</span>
+          </div>
+        `;
+      }
+
+      // ───────── 다운로드 / 파일 분석 섹션 ─────────
+      function renderDownloadsSection(feats) {
+        if (!downloadsCard || !downloadsBody || !dlPill) return;
+
+        const dl = feats.downloads;
+        if (!dl) {
+          downloadsCard.style.display = "none";
+          return;
+        }
+
+        downloadsCard.style.display = "block";
+
+        if (dl.error) {
+          dlPill.textContent = "오류";
+          dlPill.className = "pill mid";
+          downloadsBody.textContent = `다운로드 분석 오류: ${dl.error}`;
+          return;
+        }
+
+        const list = Array.isArray(dl.downloads) ? dl.downloads : [];
+        const count = dl.download_count ?? list.length ?? 0;
+        const maxRiskRaw =
+          dl.max_risk_score != null ? Number(dl.max_risk_score) : null;
+        const maxRisk =
+          maxRiskRaw != null && !Number.isNaN(maxRiskRaw)
+            ? maxRiskRaw
+            : null;
+        const summaryLine = dl.summary_line || "";
+
+        // 상단 pill
+        if (!count) {
+          dlPill.textContent = "파일 없음";
+          dlPill.className = "pill";
+        } else {
+          if (maxRisk == null) {
+            dlPill.textContent = `파일 ${count}개`;
+            dlPill.className = "pill";
+          } else if (maxRisk >= 70) {
+            dlPill.textContent = `위험 (최고 ${maxRisk.toFixed(1)}%)`;
+            dlPill.className = "pill high";
+          } else if (maxRisk >= 30) {
+            dlPill.textContent = `주의 (최고 ${maxRisk.toFixed(1)}%)`;
+            dlPill.className = "pill mid";
+          } else {
+            dlPill.textContent = `낮음 (최고 ${maxRisk.toFixed(1)}%)`;
+            dlPill.className = "pill low";
+          }
+        }
+
+        let html = `
+          <div class="kv">
+            <span class="key">파일 수:</span>
+            <span class="val">${count}</span>
+          </div>
+          <div class="kv">
+            <span class="key">최고 위험도:</span>
+            <span class="val">${
+              maxRisk != null ? maxRisk.toFixed(1) + "%" : "-"
+            }</span>
+          </div>
+        `;
+
+        if (summaryLine) {
+          html += `<div class="small" style="margin-top:4px;">${summaryLine}</div>`;
+        }
+
+        if (count > 0) {
+          html += `
+            <table class="dl-table">
+              <thead>
+                <tr>
+                  <th>파일명</th>
+                  <th>크기</th>
+                  <th>위험도</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+          for (const d of list) {
+            const path = (d.saved_path || "").toString();
+            const name =
+              d.filename ||
+              d.name ||
+              (path ? path.split(/[\\/]/).pop() : "-") ||
+              "-";
+
+            const sizeBytes =
+              d.size_bytes != null
+                ? Number(d.size_bytes)
+                : d.size != null
+                ? Number(d.size)
+                : null;
+            let sizeText = "-";
+            if (sizeBytes != null && !Number.isNaN(sizeBytes)) {
+              if (sizeBytes >= 1024 * 1024) {
+                sizeText = (sizeBytes / (1024 * 1024)).toFixed(1) + " MB";
+              } else if (sizeBytes >= 1024) {
+                sizeText = (sizeBytes / 1024).toFixed(1) + " KB";
+              } else {
+                sizeText = sizeBytes + " B";
+              }
+            }
+
+            const vtSum = d.vt_summary || d.vt || {};
+            const riskRaw =
+              vtSum.risk_score_percent != null
+                ? Number(vtSum.risk_score_percent)
+                : null;
+            let riskHtml = "<span class='small'>정보 없음</span>";
+            if (riskRaw != null && !Number.isNaN(riskRaw)) {
+              let label = "Low";
+              let cls = "pill low small-pill";
+              if (riskRaw >= 70) {
+                label = "High";
+                cls = "pill high small-pill";
+              } else if (riskRaw >= 30) {
+                label = "Medium";
+                cls = "pill mid small-pill";
+              }
+              riskHtml = `<span class="${cls}">${riskRaw.toFixed(
+                1
+              )}% ${label}</span>`;
+            }
+
+            html += `
+              <tr>
+                <td>${name}</td>
+                <td>${sizeText}</td>
+                <td>${riskHtml}</td>
+              </tr>
+            `;
+          }
+          html += "</tbody></table>";
+        }
+
+        downloadsBody.innerHTML = html;
+      }
+
+      // ───────── 룰 / 이유 ─────────
+      function renderReasons(result) {
+        reasonList.innerHTML = "";
+        const reasons = result.reasons || [];
+        if (!reasons.length) {
+          const li = document.createElement("li");
+          li.textContent = "룰 기반 특징이 없습니다.";
+          reasonList.appendChild(li);
+          return;
+        }
+        for (const r of reasons) {
+          const li = document.createElement("li");
+          const feat = (r.feature || "").toString();
+          const detail = (r.detail || "").toString();
+          const sc = r.score != null ? r.score : null;
+          li.innerHTML = `
+            <div class="feature">${feat}</div>
+            <div class="reason-detail">${detail}</div>
+            ${
+              sc !== null
+                ? `<div class="score-chip">+${sc}</div>`
+                : ""
+            }
+          `;
+          reasonList.appendChild(li);
+        }
+      }
+
+      // ───────── 최종 렌더 ─────────
+      function renderResult(task) {
+        const result = task.result || {};
+        const score =
+          result.risk_score_100 ??
+          result.risk_score ??
+          (result.risk_score_norm != null
+            ? result.risk_score_norm * 100
+            : 0);
+        const sInt = Math.round(score);
+
+        resultArea.style.display = "block";
+        scoreMain.textContent = sInt;
+        scoreSub.textContent = `Score / ${result.score_scale || 100}`;
+        setRiskPill(sInt);
+
+        engineName.textContent = result.engine || "quick-rules";
+
+        const feats = result.features || {};
+        const ml = feats.ml || {};
+        if (ml.prob != null) {
+          mlInfo.textContent = `p=${ml.prob} (rules_norm=${ml.rules_norm}, w=${ml.weight_rules})`;
+        } else {
+          mlInfo.textContent = "ML 정보 없음";
+        }
+
+        const hs = feats.http_status;
+        if (hs == null) {
+          httpStatus.textContent = "알 수 없음";
+        } else if (hs === 403 || hs === 404) {
+          httpStatus.textContent = `${hs} (접속 불가 / 차단 또는 없음)`;
+        } else {
+          httpStatus.textContent = `${hs} (응답 있음)`;
+        }
+
+        const dlSummary = feats.downloads_summary || {};
+        if (!dlSummary.enabled) {
+          dlStatus.textContent = "비활성화됨";
+        } else if (!dlSummary.ran) {
+          dlStatus.textContent = "시도 실패 또는 실행 안 됨";
+        } else {
+          dlStatus.textContent = `실행됨 / 파일 수: ${
+            dlSummary.download_count || 0
+          }`;
+        }
+
+        renderVT(feats.virustotal);
+        renderDownloadsSection(feats); // 🔹 여기서 다운로드 섹션 렌더
+        renderReasons(result);
+      }
+
+      // ───────── analyze / polling ─────────
+      async function analyze(url) {
+        analyzeBtn.disabled = true;
+        resultArea.style.display = "none";
+        try {
+          const resp = await fetch("/analyze", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-API-Key": API_KEY,
+            },
+            body: JSON.stringify({ url }),
+          });
+          if (!resp.ok) {
+            const text = await resp.text();
+            alert("분석 요청 실패: " + text);
+            return;
+          }
+          const data = await resp.json();
+          const taskId = data.task_id;
+          await pollTask(taskId);
+        } catch (e) {
+          alert("네트워크 오류: " + e);
+        } finally {
+          analyzeBtn.disabled = false;
+        }
+      }
+
+      async function pollTask(taskId) {
+        while (true) {
+          const resp = await fetch(`/tasks/${taskId}?verbose=0`, {
+            headers: { "X-API-Key": API_KEY },
+          });
+          if (!resp.ok) {
+            const t = await resp.text();
+            throw new Error("task 조회 실패: " + t);
+          }
+          const data = await resp.json();
+          if (data.status === "done") {
+            renderResult(data);
+            return;
+          }
+          await new Promise((r) => setTimeout(r, 800));
+        }
+      }
+
+      analyzeBtn.addEventListener("click", () => {
+        const url = urlInput.value.trim();
+        if (!url) {
+          alert("URL을 입력하세요.");
+          return;
+        }
+        analyze(url);
+      });
+
+      urlInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          analyzeBtn.click();
+        }
+      });
+    </script>
+  </body>
+</html>

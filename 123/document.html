@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}{{ doc.title }} - DreamDocs{% endblock %}
+
+{% block head %}
+<style>
+    .doc-header {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .doc-title {
+        font-size: 2em;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+
+    .doc-meta {
+        font-size: 1.1em;
+        opacity: 0.9;
+    }
+
+    .doc-content {
+        background: #f8fafc;
+        padding: 40px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        line-height: 1.8;
+        font-size: 1.1em;
+        white-space: pre-wrap;
+        margin-bottom: 30px;
+    }
+
+    .doc-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .info-box {
+        background: #e2e8f0;
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #4a5568;
+        margin-bottom: 5px;
+    }
+
+    .info-value {
+        color: #2d3748;
+    }
+
+    .classification {
+        display: inline-block;
+        padding: 6px 15px;
+        border-radius: 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.9em;
+    }
+
+    .classification.public {
+        background: #c6f6d5;
+        color: #22543d;
+    }
+
+    .classification.internal {
+        background: #fed7d7;
+        color: #742a2a;
+    }
+
+    .classification.confidential {
+        background: #fbb6ce;
+        color: #702459;
+    }
+
+    .back-button {
+        display: inline-block;
+        padding: 12px 24px;
+        background: #4a5568;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: background 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: #2d3748;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="doc-header">
+    <div class="doc-title">📄 {{ doc.title }}</div>
+    <div class="doc-meta">Document ID: {{ doc_id }}</div>
+</div>
+
+<div class="doc-info">
+    <div class="info-box">
+        <div class="info-label">📊 Classification</div>
+        <div class="info-value">
+            <span class="classification {{ doc.classification }}">{{ doc.classification }}</span>
+        </div>
+    </div>
+    
+    <div class="info-box">
+        <div class="info-label">👤 Author</div>
+        <div class="info-value">{{ doc.author }}</div>
+    </div>
+    
+    <div class="info-box">
+        <div class="info-label">🆔 Document ID</div>
+        <div class="info-value">#{{ doc_id }}</div>
+    </div>
+</div>
+
+<div class="doc-content">{{ doc.content }}</div>
+
+<div style="text-align: center; margin-top: 40px;">
+    <a href="/share" class="back-button">← Back to Document Library</a>
+</div>
+{% endblock %}

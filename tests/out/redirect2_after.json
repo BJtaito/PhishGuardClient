@@ -1,0 +1,49 @@
+{
+  "evidence": {
+    "start_url": "https://httpbin.org/redirect/2",
+    "final_url": "https://httpbin.org/get",
+    "final_ip": [
+      "35.170.234.92",
+      "3.221.229.78",
+      "100.29.147.161",
+      "54.234.120.160"
+    ],
+    "redirect_chain": [
+      {
+        "url": "https://httpbin.org/redirect/2",
+        "status": 302,
+        "note": ""
+      },
+      {
+        "url": "https://httpbin.org/relative-redirect/1",
+        "status": 302,
+        "note": ""
+      },
+      {
+        "url": "https://httpbin.org/get",
+        "status": 200,
+        "note": ""
+      }
+    ],
+    "html_sha256": "48e6d5eebc1e6c5f33afa7b9584aea10880c6a842b748ac0785824c7cadd5f4d",
+    "tls": {
+      "leaf_fingerprint": "10e5c3bd42720a3e3aebe14d0476e7f906449a09f7c689126619aeec5701f045"
+    },
+    "network_posts": [],
+    "page_findings": {
+      "external_form_actions": 0,
+      "form_samples": []
+    },
+    "timestamp": "2025-10-11T03:41:29Z",
+    "analyzer_version": "an1"
+  },
+  "risk_score": 5,
+  "label": "benign",
+  "reasons": [
+    {
+      "feature": "deep_redirect_chain",
+      "score": 5,
+      "detail": 3
+    }
+  ]
+}

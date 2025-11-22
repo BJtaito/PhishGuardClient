@@ -1,0 +1,53 @@
+{
+  "evidence": {
+    "start_url": "http://neverssl.com",
+    "final_url": "http://neverssl.com/",
+    "final_ip": [
+      "34.223.124.45"
+    ],
+    "redirect_chain": [
+      {
+        "url": "http://neverssl.com/",
+        "status": 200,
+        "note": ""
+      },
+      {
+        "url": "http://203.233.19.23/tm/?a=Q1SRJ8V0lOfDc5OTAwNzA0MjI0M3wxMDAwM3wxMDMxfGJtVjJaWEp6YzJ3dVkyOXR8MXwwfDB8MjAyNC0wNi0xNHwxMDMxXzE2MjFfMDAwMDU3MzB8MTc2MDA4MDg4NjAyMw==",
+        "status": 200,
+        "note": ""
+      }
+    ],
+    "html_sha256": "5112f06891304c560c4ea4b9d819baa49296ff63f8e02254eb2a340efdb50d05",
+    "tls": {
+      "leaf_fingerprint": ""
+    },
+    "network_posts": [],
+    "page_findings": {
+      "external_form_actions": 0,
+      "form_samples": []
+    },
+    "timestamp": "2025-10-10T07:21:23Z",
+    "analyzer_version": "an1"
+  },
+  "risk_score": 34,
+  "label": "benign",
+  "reasons": [
+    {
+      "feature": "http_no_tls",
+      "score": 12
+    },
+    {
+      "feature": "final_over_http",
+      "score": 6
+    },
+    {
+      "feature": "raw_ip_in_chain",
+      "score": 10,
+      "detail": 1
+    },
+    {
+      "feature": "no_tls_fingerprint",
+      "score": 6
+    }
+  ]
+}

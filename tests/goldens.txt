@@ -1,0 +1,4 @@
+# Put one URL per line. Lines starting with # are ignored.
+https://example.com
+http://neverssl.com
+https://httpbin.org/forms/post

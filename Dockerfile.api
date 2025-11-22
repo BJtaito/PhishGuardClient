@@ -1,0 +1,38 @@
+FROM python:3.10-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    # (동적분석/브라우저 쓸 거면 여기 크로뮴 의존성도 같이 넣어야 함) \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+# 1) 통합 requirements.txt 사용
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# 2) ML + 부가 패키지 (requirements.txt 에 이미 넣어두면 이 부분은 생략 가능)
+RUN pip install --no-cache-dir \
+    joblib \
+    "scikit-learn" \
+    numpy \
+    tldextract \
+    playwright \
+    beautifulsoup4 \
+    python-multipart
+
+# 3) Playwright 브라우저 설치 (동적 분석/다운로드 스캔 쓸 거면 필수)
+RUN python -m playwright install --with-deps chromium
+
+# 4) 소스 전체 복사
+COPY server/   /app/server
+COPY analyzer/ /app/analyzer
+COPY shared/   /app/shared
+COPY tools/    /app/tools
+
+WORKDIR /app/server
+
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "9000"]

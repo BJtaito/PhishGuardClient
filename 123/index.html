@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="text-align: center;">
+    <h2 style="margin-bottom: 30px; color: #4a5568;">Welcome to DreamDocs</h2>
+    
+    <div style="max-width: 600px; margin: 0 auto; text-align: left;">
+        <div style="background: #f7fafc; padding: 25px; border-radius: 10px; margin-bottom: 30px; border-left: 4px solid #667eea;">
+            <h3 style="color: #667eea; margin-bottom: 15px;">📚 About DreamDocs</h3>
+            <p style="line-height: 1.6; margin-bottom: 15px;">
+                DreamDocs is a secure document sharing platform that allows organizations to store, 
+                share, and manage their documents with proper access controls.
+            </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <a href="/share" style="display: inline-block; padding: 15px 40px; background: linear-gradient(45deg, #667eea, #764ba2); color: white; text-decoration: none; border-radius: 25px; font-size: 1.1em; font-weight: 600; transition: transform 0.3s ease;">
+                Browse Document Library →
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

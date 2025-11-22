@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  api:
+    container_name: phishguard-api
+    build:
+      context: .
+      dockerfile: Dockerfile.api   # 루트에 있는 그 파일
+    env_file:
+      - .env
+    ports:
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 120s    
+    restart: unless-stopped

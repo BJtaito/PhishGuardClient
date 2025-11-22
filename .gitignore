@@ -1,0 +1,115 @@
+# ─────────────────────────────
+# Python 공통
+# ─────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 가상환경
+venv/
+.venv/
+env/
+.env/
+.env.*
+
+
+# 패키징/빌드 결과 (PyInstaller, cx_Freeze 등)
+build/
+dist/
+*.spec
+*.exe
+*.msi
+*.whl
+
+# egg / metadata
+*.egg-info/
+.eggs/
+
+
+# ─────────────────────────────
+# IDE / 에디터
+# ─────────────────────────────
+# PyCharm / IntelliJ
+.idea/
+
+# VS Code
+.vscode/
+.history/
+
+# 기타
+*.swp
+*.swo
+
+
+# ─────────────────────────────
+# OS / 잡파일
+# ─────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+# ─────────────────────────────
+# 로그 / 임시 데이터
+# ─────────────────────────────
+logs/
+*.log
+*.tmp
+*.bak
+
+# 서버 측 작업 결과 (필요시 경로 맞춰 수정)
+tasks/
+sandbox/
+downloads/
+reports/
+cache/
+__playwright_cache__/
+.playwright/
+
+
+# ─────────────────────────────
+# Docker / 컨테이너 관련
+# ─────────────────────────────
+# docker-compose 볼륨/데이터 디렉토리 있으면 여기 추가
+docker-data/
+*.pid
+
+
+# ─────────────────────────────
+# 인증서 / 키 파일 (절대 Git에 올리지 말 것)
+# ─────────────────────────────
+certs/
+*.key
+*.crt
+*.pem
+*.p12
+*.pfx
+
+# 혹시 루트 밑에 바로 만든 경우 대비
+pg-*-ca.key
+pg-*-ca.crt
+pg-main-server.key
+pg-main-server.crt
+
+
+# ─────────────────────────────
+# 환경설정 / 민감정보
+# ─────────────────────────────
+# 환경변수 파일
+*.env
+*.env.*
+
+# 로컬 설정
+config.local.json
+settings.local.json
+secrets.json
+
+
+# ─────────────────────────────
+# Phish-Guard 클라이언트/서버 전용 (있으면)
+# ─────────────────────────────
+# 예: 로컬 분석 캐시, 다운로드 샘플, 임시분석 파일 등
+analyzer_cache/
+url_samples/
+downloaded_files/
+tmp/

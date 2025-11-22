@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+
+{% block title %}Access Denied - DreamDocs{% endblock %}
+
+{% block head %}
+<style>
+    .error-container {
+        text-align: center;
+        padding: 60px 40px;
+        background: linear-gradient(135deg, #fed7d7, #fbb6ce);
+        border-radius: 15px;
+        border: 1px solid #f56565;
+        color: #742a2a;
+    }
+
+    .error-icon {
+        font-size: 4em;
+        margin-bottom: 20px;
+    }
+
+    .error-title {
+        font-size: 2em;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: #c53030;
+    }
+
+    .error-message {
+        font-size: 1.2em;
+        line-height: 1.6;
+        margin-bottom: 30px;
+        color: #742a2a;
+    }
+
+    .error-details {
+        background: rgba(255, 255, 255, 0.7);
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        font-size: 0.95em;
+        text-align: left;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .back-buttons {
+        margin-top: 40px;
+    }
+
+    .back-button {
+        display: inline-block;
+        margin: 0 10px;
+        padding: 15px 25px;
+        background: #4a5568;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: background 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: #2d3748;
+    }
+
+    .back-button.primary {
+        background: #667eea;
+    }
+
+    .back-button.primary:hover {
+        background: #5a67d8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-icon">🚫</div>
+    <div class="error-title">Access Denied</div>
+    <div class="error-message">{{ message }}</div>
+    
+    <div class="back-buttons">
+        <a href="/share" class="back-button primary">📖 Document Library</a>
+        <a href="/" class="back-button">🏠 Home</a>
+    </div>
+</div>
+{% endblock %}

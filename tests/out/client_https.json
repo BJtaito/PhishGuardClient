@@ -1,0 +1,33 @@
+{
+  "evidence": {
+    "start_url": "https://httpbin.org/forms/post",
+    "final_url": "https://httpbin.org/forms/post",
+    "final_ip": [
+      "54.85.23.59",
+      "34.236.82.201",
+      "35.170.145.70",
+      "3.95.50.61"
+    ],
+    "redirect_chain": [
+      {
+        "url": "https://httpbin.org/forms/post",
+        "status": 200,
+        "note": ""
+      }
+    ],
+    "html_sha256": "8d3bb1bec8d8b34016c0d864dcc446ef15db31a2fc87f8f8205b42359076b315",
+    "tls": {
+      "leaf_fingerprint": "10e5c3bd42720a3e3aebe14d0476e7f906449a09f7c689126619aeec5701f045"
+    },
+    "network_posts": [],
+    "page_findings": {
+      "external_form_actions": 0,
+      "form_samples": []
+    },
+    "timestamp": "2025-11-08T09:50:24Z",
+    "analyzer_version": "an1"
+  },
+  "risk_score": 0,
+  "label": "benign",
+  "reasons": []
+}
